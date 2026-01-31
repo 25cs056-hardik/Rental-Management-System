@@ -23,8 +23,6 @@ interface AuthContextType {
 interface SignupData {
   name: string;
   email: string;
-  companyName: string;
-  gstin: string;
   password: string;
   confirmPassword: string;
   couponCode?: string;
@@ -53,11 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string; user?: User }> => {
     setIsLoading(true);
-    
-    // Simulate API call
+
     return new Promise((resolve) => {
       setTimeout(() => {
-        // Validate inputs
         if (!email || !password) {
           setIsLoading(false);
           resolve({ success: false, error: 'Email and password are required' });
@@ -70,9 +66,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Find user (simulated)
-        const foundUser = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-        
+        const emailLower = email.toLowerCase();
+
+        // 1. Check registered users (from signup) in localStorage
+        try {
+          const stored = localStorage.getItem('rental_registered_users');
+          if (stored) {
+            const registered: { user: User; password: string }[] = JSON.parse(stored);
+            const entry = registered.find(e => e.user.email.toLowerCase() === emailLower);
+            if (entry && entry.password === password) {
+              setUser(entry.user);
+              localStorage.setItem('rental_user', JSON.stringify(entry.user));
+              setIsLoading(false);
+              resolve({ success: true, user: entry.user });
+              return;
+            }
+          }
+        } catch {
+          // ignore parse errors
+        }
+
+        // 2. Fall back to mock users (no password check for demo – any 6+ char password)
+        const foundUser = mockUsers.find(u => u.email.toLowerCase() === emailLower);
         if (foundUser && password.length >= 6) {
           setUser(foundUser);
           localStorage.setItem('rental_user', JSON.stringify(foundUser));
@@ -88,25 +103,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = useCallback(async (data: SignupData): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
-    
+
     return new Promise((resolve) => {
       setTimeout(() => {
-        // Validate inputs
-        if (!data.name || !data.email || !data.companyName || !data.gstin || !data.password) {
+        if (!data.name || !data.email || !data.password) {
           setIsLoading(false);
-          resolve({ success: false, error: 'All fields are required' });
+          resolve({ success: false, error: 'Name, email and password are required' });
           return;
         }
 
         if (!validateEmail(data.email)) {
           setIsLoading(false);
           resolve({ success: false, error: 'Invalid email format' });
-          return;
-        }
-
-        if (!validateGSTIN(data.gstin)) {
-          setIsLoading(false);
-          resolve({ success: false, error: 'Invalid GSTIN format. Example: 29ABCDE1234F1Z5' });
           return;
         }
 
@@ -122,27 +130,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Check if email already exists
-        const existingUser = mockUsers.find(u => u.email.toLowerCase() === data.email.toLowerCase());
-        if (existingUser) {
+        const emailLower = data.email.toLowerCase();
+        const existingMock = mockUsers.find(u => u.email.toLowerCase() === emailLower);
+        if (existingMock) {
           setIsLoading(false);
           resolve({ success: false, error: 'Email already registered' });
           return;
         }
 
-        // Create new user (simulated) - all new users are customers
+        // Check registered users in localStorage
+        try {
+          const stored = localStorage.getItem('rental_registered_users');
+          if (stored) {
+            const registered: { user: User; password: string }[] = JSON.parse(stored);
+            if (registered.some(e => e.user.email.toLowerCase() === emailLower)) {
+              setIsLoading(false);
+              resolve({ success: false, error: 'Email already registered' });
+              return;
+            }
+          }
+        } catch {
+          // ignore
+        }
+
         const newUser: User = {
           id: generateId('user'),
           name: data.name,
           email: data.email,
           role: data.role ?? 'customer',
-          companyName: data.companyName,
-          gstin: data.gstin,
           createdAt: new Date(),
         };
 
         setUser(newUser);
         localStorage.setItem('rental_user', JSON.stringify(newUser));
+
+        // Persist for login after signup (mock: store password for sign-in)
+        try {
+          const stored = localStorage.getItem('rental_registered_users');
+          const registered: { user: User; password: string }[] = stored ? JSON.parse(stored) : [];
+          registered.push({ user: newUser, password: data.password });
+          localStorage.setItem('rental_registered_users', JSON.stringify(registered));
+        } catch {
+          // ignore
+        }
+
         setIsLoading(false);
         resolve({ success: true });
       }, 1500);

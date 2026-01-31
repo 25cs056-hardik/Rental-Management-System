@@ -6,8 +6,8 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  companyName: string;
-  gstin: string;
+  companyName?: string;
+  gstin?: string;
   phone?: string;
   address?: Address;
   createdAt: Date;
@@ -23,7 +23,7 @@ export interface Address {
 }
 
 // Product Types
-export type RentalPeriod = 'hourly' | 'daily' | 'weekly' | 'custom';
+export type RentalPeriod = 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
 
 export interface ProductAttribute {
   id: string;
@@ -50,6 +50,8 @@ export interface Product {
     hourly: number;
     daily: number;
     weekly: number;
+    monthly: number;
+    yearly: number;
   };
   quantityOnHand: number;
   quantityWithCustomer: number;

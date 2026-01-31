@@ -64,7 +64,7 @@ export const mockProducts: Product[] = [
     images: ['/placeholder.svg'],
     costPrice: 85000,
     salesPrice: 120000,
-    rentalPrices: { hourly: 500, daily: 2500, weekly: 12000 },
+    rentalPrices: { hourly: 500, daily: 2500, weekly: 12000, monthly: 60000, yearly: 600000 },
     quantityOnHand: 5,
     quantityWithCustomer: 2,
     isRentable: true,
@@ -82,7 +82,7 @@ export const mockProducts: Product[] = [
     images: ['/placeholder.svg'],
     costPrice: 150000,
     salesPrice: 200000,
-    rentalPrices: { hourly: 800, daily: 4000, weekly: 20000 },
+    rentalPrices: { hourly: 800, daily: 4000, weekly: 20000, monthly: 96000, yearly: 960000 },
     quantityOnHand: 3,
     quantityWithCustomer: 1,
     isRentable: true,
@@ -100,7 +100,7 @@ export const mockProducts: Product[] = [
     images: ['/placeholder.svg'],
     costPrice: 45000,
     salesPrice: 65000,
-    rentalPrices: { hourly: 300, daily: 1500, weekly: 7500 },
+    rentalPrices: { hourly: 300, daily: 1500, weekly: 7500, monthly: 36000, yearly: 360000 },
     quantityOnHand: 8,
     quantityWithCustomer: 3,
     isRentable: true,
@@ -118,7 +118,7 @@ export const mockProducts: Product[] = [
     images: ['/placeholder.svg'],
     costPrice: 25000,
     salesPrice: 35000,
-    rentalPrices: { hourly: 200, daily: 1000, weekly: 5000 },
+    rentalPrices: { hourly: 200, daily: 1000, weekly: 5000, monthly: 24000, yearly: 240000 },
     quantityOnHand: 10,
     quantityWithCustomer: 4,
     isRentable: true,
@@ -136,7 +136,7 @@ export const mockProducts: Product[] = [
     images: ['/placeholder.svg'],
     costPrice: 55000,
     salesPrice: 75000,
-    rentalPrices: { hourly: 400, daily: 2000, weekly: 10000 },
+    rentalPrices: { hourly: 400, daily: 2000, weekly: 10000, monthly: 48000, yearly: 480000 },
     quantityOnHand: 6,
     quantityWithCustomer: 1,
     isRentable: true,
@@ -154,7 +154,7 @@ export const mockProducts: Product[] = [
     images: ['/placeholder.svg'],
     costPrice: 120000,
     salesPrice: 160000,
-    rentalPrices: { hourly: 1000, daily: 5000, weekly: 25000 },
+    rentalPrices: { hourly: 1000, daily: 5000, weekly: 25000, monthly: 120000, yearly: 1200000 },
     quantityOnHand: 4,
     quantityWithCustomer: 2,
     isRentable: true,
@@ -420,22 +420,27 @@ export const formatDate = (date: Date): string => {
 
 export const calculateRentalPrice = (
   product: Product,
-  period: 'hourly' | 'daily' | 'weekly',
+  period: 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly',
   quantity: number,
-  days: number
+  daysOrHours: number,
+  options?: { isHours?: boolean; months?: number; years?: number }
 ): number => {
-  const pricePerPeriod = product.rentalPrices[period];
-  let multiplier = 1;
-  
-  if (period === 'daily') {
-    multiplier = days;
+  const prices = product.rentalPrices;
+  let total = 0;
+  if (period === 'hourly' && options?.isHours) {
+    total = prices.hourly * daysOrHours * quantity;
+  } else if (period === 'daily') {
+    total = prices.daily * daysOrHours * quantity;
   } else if (period === 'weekly') {
-    multiplier = Math.ceil(days / 7);
-  } else if (period === 'hourly') {
-    multiplier = days * 24;
+    total = prices.weekly * Math.ceil(daysOrHours / 7) * quantity;
+  } else if (period === 'monthly' && options?.months != null) {
+    total = prices.monthly * options.months * quantity;
+  } else if (period === 'yearly' && options?.years != null) {
+    total = prices.yearly * options.years * quantity;
+  } else {
+    total = prices.daily * daysOrHours * quantity;
   }
-  
-  return pricePerPeriod * quantity * multiplier;
+  return total;
 };
 
 // GSTIN Validation

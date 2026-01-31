@@ -39,6 +39,8 @@ export default function ProductsPage() {
     hourlyPrice: 0,
     dailyPrice: 0,
     weeklyPrice: 0,
+    monthlyPrice: 0,
+    yearlyPrice: 0,
     quantityOnHand: 0,
     isRentable: true,
     isPublished: true,
@@ -70,6 +72,8 @@ export default function ProductsPage() {
           <p>H: {formatCurrency(product.rentalPrices.hourly)}</p>
           <p>D: {formatCurrency(product.rentalPrices.daily)}</p>
           <p>W: {formatCurrency(product.rentalPrices.weekly)}</p>
+          <p>M: {formatCurrency(product.rentalPrices.monthly)}</p>
+          <p>Y: {formatCurrency(product.rentalPrices.yearly)}</p>
         </div>
       ),
     },
@@ -158,6 +162,8 @@ export default function ProductsPage() {
       hourlyPrice: product.rentalPrices.hourly,
       dailyPrice: product.rentalPrices.daily,
       weeklyPrice: product.rentalPrices.weekly,
+      monthlyPrice: product.rentalPrices.monthly,
+      yearlyPrice: product.rentalPrices.yearly,
       quantityOnHand: product.quantityOnHand,
       isRentable: product.isRentable,
       isPublished: product.isPublished,
@@ -177,6 +183,8 @@ export default function ProductsPage() {
       hourlyPrice: 0,
       dailyPrice: 0,
       weeklyPrice: 0,
+      monthlyPrice: 0,
+      yearlyPrice: 0,
       quantityOnHand: 0,
       isRentable: true,
       isPublished: true,
@@ -197,6 +205,8 @@ export default function ProductsPage() {
         hourly: formData.hourlyPrice,
         daily: formData.dailyPrice,
         weekly: formData.weeklyPrice,
+        monthly: formData.monthlyPrice,
+        yearly: formData.yearlyPrice,
       },
       quantityOnHand: formData.quantityOnHand,
       quantityWithCustomer: 0,
@@ -334,6 +344,24 @@ export default function ProductsPage() {
                     type="number"
                     value={formData.weeklyPrice}
                     onChange={(e) => setFormData(prev => ({ ...prev, weeklyPrice: Number(e.target.value) }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="monthlyPrice" className="text-xs">Monthly (₹)</Label>
+                  <Input
+                    id="monthlyPrice"
+                    type="number"
+                    value={formData.monthlyPrice}
+                    onChange={(e) => setFormData(prev => ({ ...prev, monthlyPrice: Number(e.target.value) }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="yearlyPrice" className="text-xs">Yearly (₹)</Label>
+                  <Input
+                    id="yearlyPrice"
+                    type="number"
+                    value={formData.yearlyPrice}
+                    onChange={(e) => setFormData(prev => ({ ...prev, yearlyPrice: Number(e.target.value) }))}
                   />
                 </div>
               </div>

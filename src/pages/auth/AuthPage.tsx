@@ -28,8 +28,6 @@ export default function AuthPage() {
   const [signupData, setSignupData] = useState({
     name: '',
     email: '',
-    companyName: '',
-    gstin: '',
     password: '',
     confirmPassword: '',
     couponCode: '',
@@ -125,26 +123,6 @@ export default function AuthPage() {
               required
               disabled={signupLoading}
             />
-            <input
-              type="text"
-              name="companyName"
-              placeholder="Company Name"
-              value={signupData.companyName}
-              onChange={handleSignupChange}
-              className={styles.input}
-              required
-              disabled={signupLoading}
-            />
-            <input
-              type="text"
-              name="gstin"
-              placeholder="GSTIN (e.g. 29ABCDE1234F1Z5)"
-              value={signupData.gstin}
-              onChange={handleSignupChange}
-              className={`${styles.input} uppercase`}
-              required
-              disabled={signupLoading}
-            />
             <div className={styles.passwordRow}>
               <input
                 type={showSignupPassword ? 'text' : 'password'}
@@ -195,7 +173,7 @@ export default function AuthPage() {
               disabled={signupLoading}
             />
             <button type="submit" className={styles.submitBtn} disabled={signupLoading}>
-              {signupLoading ? <LoadingSpinner size="sm" /> : 'Sign Up'}
+              {signupLoading ? <LoadingSpinner size="sm" /> : 'Create account'}
             </button>
           </form>
         </div>

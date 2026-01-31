@@ -38,12 +38,26 @@ export default function ShopPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isRentDialogOpen, setIsRentDialogOpen] = useState(false);
   
+  const addMonths = (date: Date, months: number) => {
+    const d = new Date(date);
+    d.setMonth(d.getMonth() + months);
+    return d;
+  };
+  const addYears = (date: Date, years: number) => {
+    const d = new Date(date);
+    d.setFullYear(d.getFullYear() + years);
+    return d;
+  };
+
   // Rental configuration state
   const [rentConfig, setRentConfig] = useState({
     quantity: 1,
     period: 'daily' as RentalPeriod,
     startDate: new Date(),
     endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    hours: 1,
+    months: 1,
+    years: 1,
   });
 
   const publishedProducts = products.filter(p => p.isPublished && p.isRentable);
@@ -57,48 +71,77 @@ export default function ShopPage() {
 
   const openRentDialog = (product: Product) => {
     setSelectedProduct(product);
+    const start = new Date();
+    const endDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
     setRentConfig({
       quantity: 1,
       period: 'daily',
-      startDate: new Date(),
-      endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      startDate: start,
+      endDate: endDay,
+      hours: 1,
+      months: 1,
+      years: 1,
     });
     setIsRentDialogOpen(true);
   };
 
+  const getEffectiveEndDate = (): Date => {
+    switch (rentConfig.period) {
+      case 'hourly':
+        return new Date(rentConfig.startDate.getTime() + rentConfig.hours * 60 * 60 * 1000);
+      case 'monthly':
+        return addMonths(rentConfig.startDate, rentConfig.months);
+      case 'yearly':
+        return addYears(rentConfig.startDate, rentConfig.years);
+      default:
+        return rentConfig.endDate;
+    }
+  };
+
   const calculateEstimatedTotal = () => {
     if (!selectedProduct) return 0;
-    
-    const diffTime = Math.abs(rentConfig.endDate.getTime() - rentConfig.startDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
-    
+    const prices = selectedProduct.rentalPrices;
+    const qty = rentConfig.quantity;
     let price = 0;
     switch (rentConfig.period) {
       case 'hourly':
-        price = selectedProduct.rentalPrices.hourly * diffDays * 24;
+        price = prices.hourly * rentConfig.hours * qty;
         break;
-      case 'daily':
-        price = selectedProduct.rentalPrices.daily * diffDays;
+      case 'daily': {
+        const diffTime = Math.abs(rentConfig.endDate.getTime() - rentConfig.startDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+        price = prices.daily * diffDays * qty;
         break;
-      case 'weekly':
-        price = selectedProduct.rentalPrices.weekly * Math.ceil(diffDays / 7);
+      }
+      case 'weekly': {
+        const diffTime = Math.abs(rentConfig.endDate.getTime() - rentConfig.startDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+        price = prices.weekly * Math.ceil(diffDays / 7) * qty;
         break;
+      }
+      case 'monthly':
+        price = prices.monthly * rentConfig.months * qty;
+        break;
+      case 'yearly':
+        price = prices.yearly * rentConfig.years * qty;
+        break;
+      default:
+        price = prices.daily * rentConfig.quantity;
     }
-    
-    return price * rentConfig.quantity;
+    return price;
   };
 
   const handleAddToCart = () => {
-    if (selectedProduct) {
-      addItem(
-        selectedProduct,
-        rentConfig.quantity,
-        rentConfig.period,
-        rentConfig.startDate,
-        rentConfig.endDate
-      );
-      setIsRentDialogOpen(false);
-    }
+    if (!selectedProduct) return;
+    const endDate = getEffectiveEndDate();
+    addItem(
+      selectedProduct,
+      rentConfig.quantity,
+      rentConfig.period,
+      rentConfig.startDate,
+      endDate
+    );
+    setIsRentDialogOpen(false);
   };
 
   const cartCount = getItemCount();
@@ -182,6 +225,14 @@ export default function ShopPage() {
                     <span className="text-muted-foreground">Weekly:</span>
                     <span className="font-medium">{formatCurrency(product.rentalPrices.weekly)}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Monthly:</span>
+                    <span className="font-medium">{formatCurrency(product.rentalPrices.monthly)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Yearly:</span>
+                    <span className="font-medium">{formatCurrency(product.rentalPrices.yearly)}</span>
+                  </div>
                 </div>
                 <p className={cn(
                   "mt-2 text-sm",
@@ -264,7 +315,15 @@ export default function ShopPage() {
                   <Label>Rental Period</Label>
                   <Select
                     value={rentConfig.period}
-                    onValueChange={(value: RentalPeriod) => setRentConfig(prev => ({ ...prev, period: value }))}
+                    onValueChange={(value: RentalPeriod) => {
+                      setRentConfig(prev => {
+                        const next = { ...prev, period: value };
+                        if (value === 'hourly') next.endDate = new Date(prev.startDate.getTime() + prev.hours * 60 * 60 * 1000);
+                        else if (value === 'monthly') next.endDate = addMonths(prev.startDate, prev.months);
+                        else if (value === 'yearly') next.endDate = addYears(prev.startDate, prev.years);
+                        return next;
+                      });
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -273,31 +332,108 @@ export default function ShopPage() {
                       <SelectItem value="hourly">Hourly - {formatCurrency(selectedProduct.rentalPrices.hourly)}/hr</SelectItem>
                       <SelectItem value="daily">Daily - {formatCurrency(selectedProduct.rentalPrices.daily)}/day</SelectItem>
                       <SelectItem value="weekly">Weekly - {formatCurrency(selectedProduct.rentalPrices.weekly)}/week</SelectItem>
+                      <SelectItem value="monthly">Monthly - {formatCurrency(selectedProduct.rentalPrices.monthly)}/month</SelectItem>
+                      <SelectItem value="yearly">Yearly - {formatCurrency(selectedProduct.rentalPrices.yearly)}/year</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Date Range */}
-                <div className="grid gap-4 sm:grid-cols-2">
+                {/* Hours input when Hourly */}
+                {rentConfig.period === 'hourly' && (
                   <div className="space-y-2">
-                    <Label>Start Date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {format(rentConfig.startDate, 'PP')}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={rentConfig.startDate}
-                          onSelect={(date) => date && setRentConfig(prev => ({ ...prev, startDate: date }))}
-                          disabled={(date) => date < new Date()}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Label>How many hours?</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={720}
+                      value={rentConfig.hours}
+                      onChange={(e) => {
+                        const hours = Math.max(1, Math.min(720, Number(e.target.value) || 1));
+                        setRentConfig(prev => ({
+                          ...prev,
+                          hours,
+                          endDate: new Date(prev.startDate.getTime() + hours * 60 * 60 * 1000),
+                        }));
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">Rent duration: {rentConfig.hours} hour{rentConfig.hours !== 1 ? 's' : ''}</p>
                   </div>
+                )}
+
+                {/* Months input when Monthly */}
+                {rentConfig.period === 'monthly' && (
+                  <div className="space-y-2">
+                    <Label>Number of months</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={24}
+                      value={rentConfig.months}
+                      onChange={(e) => {
+                        const months = Math.max(1, Math.min(24, Number(e.target.value) || 1));
+                        setRentConfig(prev => ({
+                          ...prev,
+                          months,
+                          endDate: addMonths(prev.startDate, months),
+                        }));
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Years input when Yearly */}
+                {rentConfig.period === 'yearly' && (
+                  <div className="space-y-2">
+                    <Label>Number of years</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={rentConfig.years}
+                      onChange={(e) => {
+                        const years = Math.max(1, Math.min(5, Number(e.target.value) || 1));
+                        setRentConfig(prev => ({
+                          ...prev,
+                          years,
+                          endDate: addYears(prev.startDate, years),
+                        }));
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Start Date (for all) */}
+                <div className="space-y-2">
+                  <Label>{rentConfig.period === 'hourly' ? 'Start date & time' : 'Start Date'}</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {format(rentConfig.startDate, rentConfig.period === 'hourly' ? 'PPp' : 'PP')}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={rentConfig.startDate}
+                        onSelect={(date) => {
+                          if (!date) return;
+                          setRentConfig(prev => {
+                            const next = { ...prev, startDate: date };
+                            if (prev.period === 'hourly') next.endDate = new Date(date.getTime() + prev.hours * 60 * 60 * 1000);
+                            else if (prev.period === 'monthly') next.endDate = addMonths(date, prev.months);
+                            else if (prev.period === 'yearly') next.endDate = addYears(date, prev.years);
+                            return next;
+                          });
+                        }}
+                        disabled={(date) => date < new Date()}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* End Date (only for daily & weekly) */}
+                {(rentConfig.period === 'daily' || rentConfig.period === 'weekly') && (
                   <div className="space-y-2">
                     <Label>End Date</Label>
                     <Popover>
@@ -317,7 +453,7 @@ export default function ShopPage() {
                       </PopoverContent>
                     </Popover>
                   </div>
-                </div>
+                )}
 
                 {/* Estimated Total */}
                 <div className="rounded-lg bg-muted p-4">

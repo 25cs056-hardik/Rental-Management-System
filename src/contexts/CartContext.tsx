@@ -24,17 +24,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const calculatePrice = (product: Product, period: RentalPeriod, startDate: Date, endDate: Date): number => {
     const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const diffHours = diffTime / (1000 * 60 * 60);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
-    
+    const diffMonths = diffTime / (30.44 * 24 * 60 * 60 * 1000);
+    const diffYears = diffTime / (365.25 * 24 * 60 * 60 * 1000);
+    const prices = product.rentalPrices;
+
     switch (period) {
       case 'hourly':
-        return product.rentalPrices.hourly * diffDays * 24;
+        return prices.hourly * Math.max(1, Math.ceil(diffHours));
       case 'daily':
-        return product.rentalPrices.daily * diffDays;
+        return prices.daily * diffDays;
       case 'weekly':
-        return product.rentalPrices.weekly * Math.ceil(diffDays / 7);
+        return prices.weekly * Math.ceil(diffDays / 7);
+      case 'monthly':
+        return prices.monthly * Math.max(1, diffMonths);
+      case 'yearly':
+        return prices.yearly * Math.max(1, diffYears);
       default:
-        return product.rentalPrices.daily * diffDays;
+        return prices.daily * diffDays;
     }
   };
 
