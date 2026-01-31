@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '@/types';
 import { mockUsers, validateGSTIN, validateEmail, generateId } from '@/data/mockData';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface VendorApplicationData {
   companyName: string;
@@ -29,193 +31,298 @@ interface SignupData {
   role?: UserRole;
 }
 
+interface ProfileRow {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  company_name: string | null;
+  gstin: string | null;
+  phone: string | null;
+  created_at: string;
+}
+
+function profileToUser(row: ProfileRow): User {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role as UserRole,
+    companyName: row.company_name ?? undefined,
+    gstin: row.gstin ?? undefined,
+    phone: row.phone ?? undefined,
+    createdAt: new Date(row.created_at),
+  };
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const useSupabase = isSupabaseConfigured();
+
+  const fetchProfile = useCallback(async (authUser: SupabaseUser): Promise<User | null> => {
+    if (!supabase) return null;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, name, email, role, company_name, gstin, phone, created_at')
+      .eq('id', authUser.id)
+      .single();
+    if (error || !data) return null;
+    return profileToUser(data as ProfileRow);
+  }, []);
 
   useEffect(() => {
-    // Check for stored user on mount
-    const storedUser = localStorage.getItem('rental_user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-      } catch (e) {
-        localStorage.removeItem('rental_user');
+    if (!useSupabase || !supabase) {
+      const storedUser = localStorage.getItem('rental_user');
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          setUser({ ...parsed, createdAt: parsed.createdAt ? new Date(parsed.createdAt) : new Date() });
+        } catch {
+          localStorage.removeItem('rental_user');
+        }
       }
+      setIsLoading(false);
+      return;
     }
-    setIsLoading(false);
-  }, []);
+
+    let cancelled = false;
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (cancelled) return;
+        if (session?.user) {
+          const profileUser = await fetchProfile(session.user);
+          if (cancelled) return;
+          if (profileUser) setUser(profileUser);
+        }
+      } catch (e) {
+        console.warn('Auth session init failed:', e);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    initSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      try {
+        if (session?.user) {
+          const profileUser = await fetchProfile(session.user);
+          setUser(profileUser ?? null);
+        } else {
+          setUser(null);
+        }
+      } catch (e) {
+        console.warn('Auth state change error:', e);
+        setUser(null);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [useSupabase, fetchProfile]);
 
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string; user?: User }> => {
-    setIsLoading(true);
+    const emailTrimmed = email?.trim().toLowerCase() || '';
+    if (!emailTrimmed || !password) {
+      return { success: false, error: 'Email and password are required' };
+    }
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (!email || !password) {
-          setIsLoading(false);
-          resolve({ success: false, error: 'Email and password are required' });
-          return;
+    if (useSupabase && supabase) {
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailTrimmed,
+        password,
+      });
+      setIsLoading(false);
+      if (error) {
+        const message = error.message?.toLowerCase().includes('invalid') || error.message?.toLowerCase().includes('credentials')
+          ? 'Invalid email or password'
+          : error.message || 'Invalid email or password';
+        return { success: false, error: message };
+      }
+      if (data.user) {
+        const profileUser = await fetchProfile(data.user);
+        if (profileUser) {
+          setUser(profileUser);
+          return { success: true, user: profileUser };
         }
+      }
+      return { success: false, error: 'Could not load profile' };
+    }
 
-        if (!validateEmail(email)) {
-          setIsLoading(false);
-          resolve({ success: false, error: 'Invalid email format' });
-          return;
+    if (!validateEmail(emailTrimmed)) {
+      return { success: false, error: 'Invalid email format' };
+    }
+    try {
+      const stored = localStorage.getItem('rental_registered_users');
+      if (stored) {
+        const registered: { user: User; password: string }[] = JSON.parse(stored);
+        const entry = registered.find(e => e.user.email.toLowerCase() === emailTrimmed);
+        if (entry && entry.password === password) {
+          setUser(entry.user);
+          localStorage.setItem('rental_user', JSON.stringify(entry.user));
+          return { success: true, user: entry.user };
         }
-
-        const emailLower = email.toLowerCase();
-
-        // 1. Check registered users (from signup) in localStorage
-        try {
-          const stored = localStorage.getItem('rental_registered_users');
-          if (stored) {
-            const registered: { user: User; password: string }[] = JSON.parse(stored);
-            const entry = registered.find(e => e.user.email.toLowerCase() === emailLower);
-            if (entry && entry.password === password) {
-              setUser(entry.user);
-              localStorage.setItem('rental_user', JSON.stringify(entry.user));
-              setIsLoading(false);
-              resolve({ success: true, user: entry.user });
-              return;
-            }
-          }
-        } catch {
-          // ignore parse errors
-        }
-
-        // 2. Fall back to mock users (no password check for demo – any 6+ char password)
-        const foundUser = mockUsers.find(u => u.email.toLowerCase() === emailLower);
-        if (foundUser && password.length >= 6) {
-          setUser(foundUser);
-          localStorage.setItem('rental_user', JSON.stringify(foundUser));
-          setIsLoading(false);
-          resolve({ success: true, user: foundUser });
-        } else {
-          setIsLoading(false);
-          resolve({ success: false, error: 'Invalid email or password' });
-        }
-      }, 1000);
-    });
-  }, []);
+      }
+    } catch {
+      // ignore
+    }
+    const foundUser = mockUsers.find(u => u.email.toLowerCase() === emailTrimmed);
+    if (foundUser && password.length >= 6) {
+      setUser(foundUser);
+      localStorage.setItem('rental_user', JSON.stringify(foundUser));
+      return { success: true, user: foundUser };
+    }
+    return { success: false, error: 'Invalid email or password' };
+  }, [useSupabase, fetchProfile]);
 
   const signup = useCallback(async (data: SignupData): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
+    const emailTrimmed = (data.email ?? '').trim().toLowerCase();
+    if (!data.name?.trim() || !emailTrimmed || !data.password) {
+      return { success: false, error: 'Name, email and password are required' };
+    }
+    if (!validateEmail(emailTrimmed)) {
+      return { success: false, error: 'Please enter a valid email address' };
+    }
+    if (data.password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters' };
+    }
+    if (data.password !== data.confirmPassword) {
+      return { success: false, error: 'Passwords do not match' };
+    }
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (!data.name || !data.email || !data.password) {
-          setIsLoading(false);
-          resolve({ success: false, error: 'Name, email and password are required' });
-          return;
-        }
-
-        if (!validateEmail(data.email)) {
-          setIsLoading(false);
-          resolve({ success: false, error: 'Invalid email format' });
-          return;
-        }
-
-        if (data.password.length < 6) {
-          setIsLoading(false);
-          resolve({ success: false, error: 'Password must be at least 6 characters' });
-          return;
-        }
-
-        if (data.password !== data.confirmPassword) {
-          setIsLoading(false);
-          resolve({ success: false, error: 'Passwords do not match' });
-          return;
-        }
-
-        const emailLower = data.email.toLowerCase();
-        const existingMock = mockUsers.find(u => u.email.toLowerCase() === emailLower);
-        if (existingMock) {
-          setIsLoading(false);
-          resolve({ success: false, error: 'Email already registered' });
-          return;
-        }
-
-        // Check registered users in localStorage
-        try {
-          const stored = localStorage.getItem('rental_registered_users');
-          if (stored) {
-            const registered: { user: User; password: string }[] = JSON.parse(stored);
-            if (registered.some(e => e.user.email.toLowerCase() === emailLower)) {
-              setIsLoading(false);
-              resolve({ success: false, error: 'Email already registered' });
-              return;
-            }
-          }
-        } catch {
-          // ignore
-        }
-
-        const newUser: User = {
-          id: generateId('user'),
-          name: data.name,
-          email: data.email,
-          role: data.role ?? 'customer',
-          createdAt: new Date(),
-        };
-
-        setUser(newUser);
-        localStorage.setItem('rental_user', JSON.stringify(newUser));
-
-        // Persist for login after signup (mock: store password for sign-in)
-        try {
-          const stored = localStorage.getItem('rental_registered_users');
-          const registered: { user: User; password: string }[] = stored ? JSON.parse(stored) : [];
-          registered.push({ user: newUser, password: data.password });
-          localStorage.setItem('rental_registered_users', JSON.stringify(registered));
-        } catch {
-          // ignore
-        }
-
+    if (useSupabase && supabase) {
+      setIsLoading(true);
+      const { data: authData, error } = await supabase.auth.signUp({
+        email: emailTrimmed,
+        password: data.password,
+        options: {
+          data: {
+            name: data.name.trim(),
+            role: data.role ?? 'customer',
+          },
+        },
+      });
+      if (error) {
         setIsLoading(false);
-        resolve({ success: true });
-      }, 1500);
-    });
-  }, []);
+        if (error.message?.toLowerCase().includes('already registered') || error.message?.toLowerCase().includes('already exists')) {
+          return { success: false, error: 'Email already registered' };
+        }
+        return { success: false, error: error.message || 'Signup failed' };
+      }
+      if (authData.user) {
+        const role = data.role ?? 'customer';
+        const name = data.name.trim();
+        // Always write profile to Supabase (in case DB trigger is missing or delayed)
+        const { error: profileError } = await supabase.from('profiles').upsert(
+          {
+            id: authData.user.id,
+            name,
+            email: emailTrimmed,
+            role,
+            company_name: '',
+            gstin: '',
+          },
+          { onConflict: 'id' }
+        );
+        if (profileError) {
+          console.warn('Profile upsert:', profileError.message);
+        }
+        await new Promise(r => setTimeout(r, 300));
+        const profileUser = await fetchProfile(authData.user);
+        if (profileUser) {
+          setUser(profileUser);
+          setIsLoading(false);
+          return { success: true };
+        }
+        if (authData.session) {
+          const { data: profileRow } = await supabase
+            .from('profiles')
+            .select('id, name, email, role, company_name, gstin, phone, created_at')
+            .eq('id', authData.user.id)
+            .single();
+          if (profileRow) {
+            setUser(profileToUser(profileRow as ProfileRow));
+            setIsLoading(false);
+            return { success: true };
+          }
+        }
+        setUser({
+          id: authData.user.id,
+          name,
+          email: emailTrimmed,
+          role: role as UserRole,
+          createdAt: new Date(),
+        });
+        setIsLoading(false);
+        return { success: true };
+      }
+      setIsLoading(false);
+      return { success: true };
+    }
+
+    const existingMock = mockUsers.find(u => u.email.toLowerCase() === emailTrimmed);
+    if (existingMock) return { success: false, error: 'Email already registered' };
+    try {
+      const stored = localStorage.getItem('rental_registered_users');
+      if (stored) {
+        const registered: { user: User; password: string }[] = JSON.parse(stored);
+        if (registered.some(e => e.user.email.toLowerCase() === emailTrimmed)) {
+          return { success: false, error: 'Email already registered' };
+        }
+      }
+    } catch {
+      // ignore
+    }
+    const newUser: User = {
+      id: generateId('user'),
+      name: data.name.trim(),
+      email: emailTrimmed,
+      role: data.role ?? 'customer',
+      createdAt: new Date(),
+    };
+    setUser(newUser);
+    localStorage.setItem('rental_user', JSON.stringify(newUser));
+    try {
+      const stored = localStorage.getItem('rental_registered_users');
+      const registered: { user: User; password: string }[] = stored ? JSON.parse(stored) : [];
+      registered.push({ user: newUser, password: data.password });
+      localStorage.setItem('rental_registered_users', JSON.stringify(registered));
+    } catch {
+      // ignore
+    }
+    return { success: true };
+  }, [useSupabase, fetchProfile]);
 
   const logout = useCallback(() => {
+    if (useSupabase && supabase) supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem('rental_user');
-  }, []);
+  }, [useSupabase]);
 
   const forgotPassword = useCallback(async (email: string): Promise<{ success: boolean; error?: string }> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (!email) {
-          resolve({ success: false, error: 'Email is required' });
-          return;
-        }
-
-        if (!validateEmail(email)) {
-          resolve({ success: false, error: 'Invalid email format' });
-          return;
-        }
-
-        // Simulate sending email
-        resolve({ success: true });
-      }, 1000);
-    });
-  }, []);
+    if (!email?.trim()) return { success: false, error: 'Email is required' };
+    if (!validateEmail(email.trim())) return { success: false, error: 'Invalid email format' };
+    if (useSupabase) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    }
+    return { success: true };
+  }, [useSupabase]);
 
   const applyVendorAccess = useCallback(
     async (data: VendorApplicationData): Promise<{ success: boolean; error?: string }> => {
       if (!user) return { success: false, error: 'Not logged in' };
-      if (user.role === 'vendor' || user.role === 'admin') {
-        return { success: true };
-      }
-      if (!data.companyName || !data.gstin) {
-        return { success: false, error: 'Company name and GSTIN are required' };
-      }
-      if (!validateGSTIN(data.gstin)) {
-        return { success: false, error: 'Invalid GSTIN format. Example: 29ABCDE1234F1Z5' };
-      }
+      if (user.role === 'vendor' || user.role === 'admin') return { success: true };
+      if (!data.companyName || !data.gstin) return { success: false, error: 'Company name and GSTIN are required' };
+      if (!validateGSTIN(data.gstin)) return { success: false, error: 'Invalid GSTIN format. Example: 29ABCDE1234F1Z5' };
       const updatedUser: User = {
         ...user,
         role: 'vendor',
@@ -223,22 +330,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         gstin: data.gstin,
         phone: data.phone,
       };
+      if (useSupabase && supabase) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            role: 'vendor',
+            company_name: data.companyName,
+            gstin: data.gstin,
+            phone: data.phone ?? null,
+          })
+          .eq('id', user.id);
+        if (error) return { success: false, error: error.message };
+      } else {
+        localStorage.setItem('rental_user', JSON.stringify(updatedUser));
+      }
       setUser(updatedUser);
-      localStorage.setItem('rental_user', JSON.stringify(updatedUser));
       return { success: true };
     },
-    [user]
+    [user, useSupabase]
   );
 
   const applyAdminAccess = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: 'Not logged in' };
     if (user.role === 'admin') return { success: true };
-    // For demo: grant admin access. In production this would send a request for approval.
     const updatedUser: User = { ...user, role: 'admin' };
+    if (useSupabase && supabase) {
+      const { error } = await supabase.from('profiles').update({ role: 'admin' }).eq('id', user.id);
+      if (error) return { success: false, error: error.message };
+    } else {
+      localStorage.setItem('rental_user', JSON.stringify(updatedUser));
+    }
     setUser(updatedUser);
-    localStorage.setItem('rental_user', JSON.stringify(updatedUser));
     return { success: true };
-  }, [user]);
+  }, [user, useSupabase]);
 
   const value: AuthContextType = {
     user,

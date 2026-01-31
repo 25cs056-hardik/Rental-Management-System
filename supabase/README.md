@@ -11,11 +11,10 @@
 
 Get these from **Project Settings** → **API** in the Supabase dashboard:
 
-- **VITE_SUPABASE_PROJECT_ID** — The project ref (the part before `.supabase.co` in your Project URL).
 - **VITE_SUPABASE_URL** — Project URL (e.g. `https://xxxxx.supabase.co`).
-- **VITE_SUPABASE_ANON_KEY** — anon public key.
+- **VITE_SUPABASE_PUBLISHABLE_KEY** — publishable API key (anon public; not the service_role key).
 
-Replace the placeholders in the root `.env` file with these values.
+Copy `.env.example` to `.env` and replace the placeholders with your values. Restart the dev server after changing `.env`. See **SUPABASE_SETUP.md** in the project root for step-by-step instructions and why auth data might not appear.
 
 ## Tables created
 
@@ -33,4 +32,6 @@ Replace the placeholders in the root `.env` file with these values.
 | `company_settings` | Company config (single row)      |
 | `rental_settings`  | Rental rules (single row)        |
 
-**Note:** `profiles.id` references `auth.users(id)`. Create users via Supabase Auth (e.g. sign up) so you can insert rows into `profiles` and other tables that reference it.
+**Note:** `profiles.id` references `auth.users(id)`. The schema includes a trigger `on_auth_user_created` that automatically creates a row in `profiles` when someone signs up via Supabase Auth, so sign-up and sign-in work with the same account.
+
+**Important:** In Supabase Dashboard → **Authentication** → **Providers** → **Email**, you can turn off **Confirm email** if you want users to sign in immediately after sign-up without confirming their email. Otherwise, users must confirm their email before they can sign in.

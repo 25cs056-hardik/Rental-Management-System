@@ -19,6 +19,27 @@ CREATE TABLE profiles (
 );
 
 -- =============================================================================
+-- TRIGGER: Create profile when a new auth user signs up
+-- =============================================================================
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, name, email, role)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'role', 'customer')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- =============================================================================
 -- ADDRESSES
 -- =============================================================================
 CREATE TABLE addresses (
@@ -244,6 +265,53 @@ CREATE POLICY "Users can read own profile" ON profiles
 
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can delete own profile" ON profiles
+  FOR DELETE USING (auth.uid() = id);
+
+-- Allow authenticated users to manage their own addresses
+CREATE POLICY "Users can insert own address" ON addresses
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own address" ON addresses
+  FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own address" ON addresses
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Allow vendors to manage their own products
+CREATE POLICY "Vendors can insert own product" ON products
+  FOR INSERT WITH CHECK (auth.uid() = vendor_id);
+CREATE POLICY "Vendors can update own product" ON products
+  FOR UPDATE USING (auth.uid() = vendor_id);
+CREATE POLICY "Vendors can delete own product" ON products
+  FOR DELETE USING (auth.uid() = vendor_id);
+
+-- Allow customers to create and view their own orders/quotations
+CREATE POLICY "Customers can insert own order" ON orders
+  FOR INSERT WITH CHECK (auth.uid() = customer_id);
+CREATE POLICY "Customers can update own order" ON orders
+  FOR UPDATE USING (auth.uid() = customer_id);
+CREATE POLICY "Customers can insert own order line" ON order_lines
+  FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM orders WHERE id = order_id AND customer_id = auth.uid()));
+CREATE POLICY "Customers can update own order line" ON order_lines
+  FOR UPDATE USING (EXISTS (SELECT 1 FROM orders WHERE id = order_id AND customer_id = auth.uid()));
+
+CREATE POLICY "Customers can insert own quotation" ON quotations
+  FOR INSERT WITH CHECK (auth.uid() = customer_id);
+CREATE POLICY "Customers can update own quotation" ON quotations
+  FOR UPDATE USING (auth.uid() = customer_id);
+CREATE POLICY "Customers can insert own quotation line" ON quotation_lines
+  FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM quotations WHERE id = quotation_id AND customer_id = auth.uid()));
+CREATE POLICY "Customers can update own quotation line" ON quotation_lines
+  FOR UPDATE USING (EXISTS (SELECT 1 FROM quotations WHERE id = quotation_id AND customer_id = auth.uid()));
+
+-- Allow admins to manage company and rental settings (assuming 'admin' role in profiles)
+CREATE POLICY "Admins can manage company settings" ON company_settings
+  FOR ALL USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
+CREATE POLICY "Admins can manage rental settings" ON rental_settings
+  FOR ALL USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
 
 -- Allow read for anon/authenticated (adjust for your auth setup)
 CREATE POLICY "Allow read products" ON products
