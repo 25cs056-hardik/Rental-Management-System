@@ -1,5 +1,5 @@
-import { 
-  User, Product, RentalOrder, Quotation, Invoice, 
+import {
+  User, Product, RentalOrder, Quotation, Invoice,
   ProductAttribute, CompanySettings, RentalSettings,
   DashboardMetrics, ChartDataPoint
 } from '@/types';
@@ -61,7 +61,7 @@ export const mockProducts: Product[] = [
     name: 'Professional DSLR Camera',
     description: 'High-end DSLR camera perfect for professional photography and videography.',
     category: 'Cameras',
-    images: ['/placeholder.svg'],
+    images: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=1000&auto=format&fit=crop'],
     costPrice: 85000,
     salesPrice: 120000,
     rentalPrices: { hourly: 500, daily: 2500, weekly: 12000, monthly: 60000, yearly: 600000 },
@@ -79,7 +79,7 @@ export const mockProducts: Product[] = [
     name: 'Professional Video Camera',
     description: '4K video camera with advanced stabilization for professional video production.',
     category: 'Cameras',
-    images: ['/placeholder.svg'],
+    images: ['https://images.unsplash.com/photo-1588483977959-58b122f6d0f6?q=80&w=1000&auto=format&fit=crop'],
     costPrice: 150000,
     salesPrice: 200000,
     rentalPrices: { hourly: 800, daily: 4000, weekly: 20000, monthly: 96000, yearly: 960000 },
@@ -97,7 +97,7 @@ export const mockProducts: Product[] = [
     name: 'Portable PA System',
     description: 'Complete portable PA system with speakers, mixer, and microphones.',
     category: 'Audio',
-    images: ['/placeholder.svg'],
+    images: ['https://images.unsplash.com/photo-1520529986492-9a4f487cb71a?q=80&w=1000&auto=format&fit=crop'],
     costPrice: 45000,
     salesPrice: 65000,
     rentalPrices: { hourly: 300, daily: 1500, weekly: 7500, monthly: 36000, yearly: 360000 },
@@ -115,7 +115,7 @@ export const mockProducts: Product[] = [
     name: 'LED Lighting Kit',
     description: 'Professional LED lighting kit for photography and video production.',
     category: 'Lighting',
-    images: ['/placeholder.svg'],
+    images: ['https://images.unsplash.com/photo-1554593442-99933583c267?q=80&w=1000&auto=format&fit=crop'],
     costPrice: 25000,
     salesPrice: 35000,
     rentalPrices: { hourly: 200, daily: 1000, weekly: 5000, monthly: 24000, yearly: 240000 },
@@ -133,7 +133,7 @@ export const mockProducts: Product[] = [
     name: 'Projector HD',
     description: 'Full HD projector for presentations and home theater.',
     category: 'Display',
-    images: ['/placeholder.svg'],
+    images: ['https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1000&auto=format&fit=crop'],
     costPrice: 55000,
     salesPrice: 75000,
     rentalPrices: { hourly: 400, daily: 2000, weekly: 10000, monthly: 48000, yearly: 480000 },
@@ -151,7 +151,7 @@ export const mockProducts: Product[] = [
     name: 'Drone Professional',
     description: 'Professional drone with 4K camera and 30 min flight time.',
     category: 'Drones',
-    images: ['/placeholder.svg'],
+    images: ['https://images.unsplash.com/photo-1473968512647-3e447244af8f?q=80&w=1000&auto=format&fit=crop'],
     costPrice: 120000,
     salesPrice: 160000,
     rentalPrices: { hourly: 1000, daily: 5000, weekly: 25000, monthly: 120000, yearly: 1200000 },
@@ -333,6 +333,7 @@ export const mockInvoices: Invoice[] = [
 
 // Company Settings
 export const defaultCompanySettings: CompanySettings = {
+  id: 'settings-1',
   name: 'Rental Management Corp',
   gstin: '29ABCDE1234F1Z5',
   address: '123 Business Park, Tech City, State 400001',
@@ -345,6 +346,7 @@ export const defaultCompanySettings: CompanySettings = {
 
 // Rental Settings
 export const defaultRentalSettings: RentalSettings = {
+  id: 'rental-settings-1',
   allowHourly: true,
   allowDaily: true,
   allowWeekly: true,

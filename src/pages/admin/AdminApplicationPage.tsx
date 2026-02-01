@@ -23,6 +23,9 @@ export default function AdminApplicationPage() {
   }
 
   const handleRequestAccess = async () => {
+    if (!window.confirm("Are you sure you want to request Admin access?\n\nThis will immediately change your role to Admin for this demo session.")) {
+      return;
+    }
     setError('');
     setIsLoading(true);
     const result = await applyAdminAccess();
@@ -56,10 +59,10 @@ export default function AdminApplicationPage() {
             As an admin you will be able to view all customers, manage platform-wide reports, and access admin-only settings.
           </p>
           <Button onClick={handleRequestAccess} className="w-full" disabled={isLoading}>
-            {isLoading ? <LoadingSpinner size="sm" /> : 'Request admin access'}
+            {isLoading ? <LoadingSpinner size="sm" /> : 'Confirm and request admin access'}
           </Button>
           <p className="text-center text-xs text-muted-foreground">
-            In production, this would send a request for approval by an existing admin.
+            <b>Note:</b> In this demo, access is granted immediately. In production, this would require approval.
           </p>
         </CardContent>
       </Card>

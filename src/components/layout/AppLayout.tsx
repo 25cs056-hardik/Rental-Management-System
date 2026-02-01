@@ -17,12 +17,12 @@ import {
   Menu,
   X,
   ChevronDown,
-  Bell,
   User,
   BarChart3,
   Building2,
   ShieldCheck,
 } from 'lucide-react';
+import { NotificationPopover } from '@/components/notifications/NotificationPopover';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,13 +56,22 @@ const navItems: NavItem[] = [
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, switchRole } = useAuth();
   const { getItemCount } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const filteredNavItems = navItems.filter(item => 
+  const handleRoleSwitch = async (role: 'admin' | 'vendor' | 'customer') => {
+    await switchRole(role);
+    if (role === 'customer') {
+      navigate('/shop');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  const filteredNavItems = navItems.filter(item =>
     user && item.roles.includes(user.role)
   );
 
@@ -77,7 +86,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       {/* Mobile sidebar overlay */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -184,10 +193,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-destructive" />
-            </Button>
+            <NotificationPopover />
 
             {/* User menu */}
             <DropdownMenu>
@@ -210,6 +216,39 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
+                </DropdownMenuItem>
+
+                {/* Role Switcher Submenu for Demo */}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                  Switch Role (Demo)
+                </DropdownMenuLabel>
+
+                <DropdownMenuItem
+                  onClick={() => handleRoleSwitch('admin')}
+                  disabled={user?.role === 'admin'}
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Admin
+                  {user?.role === 'admin' && <span className="ml-auto text-xs">Current</span>}
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => handleRoleSwitch('vendor')}
+                  disabled={user?.role === 'vendor'}
+                >
+                  <Building2 className="mr-2 h-4 w-4" />
+                  Vendor
+                  {user?.role === 'vendor' && <span className="ml-auto text-xs">Current</span>}
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => handleRoleSwitch('customer')}
+                  disabled={user?.role === 'customer'}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Customer
+                  {user?.role === 'customer' && <span className="ml-auto text-xs">Current</span>}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

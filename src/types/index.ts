@@ -165,6 +165,7 @@ export interface ChartDataPoint {
 
 // Settings Types
 export interface CompanySettings {
+  id: string;
   name: string;
   gstin: string;
   address: string;
@@ -177,6 +178,7 @@ export interface CompanySettings {
 }
 
 export interface RentalSettings {
+  id: string;
   allowHourly: boolean;
   allowDaily: boolean;
   allowWeekly: boolean;

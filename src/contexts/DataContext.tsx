@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import {
   Product, RentalOrder, Quotation, Invoice,
   ProductAttribute, CompanySettings, RentalSettings,
-  UserRole, User
+  UserRole, User, RentalOrderLine, OrderStatus, QuotationStatus, InvoiceStatus, PaymentMethod, ProductVariant
 } from '@/types';
 import {
   mockProducts, mockOrders, mockQuotations, mockInvoices,
@@ -18,23 +18,23 @@ interface DataContextType {
   addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'vendorId' | 'quantityWithCustomer'>) => Promise<Product | null>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
-  
+
   // Orders
   orders: RentalOrder[];
   addOrder: (order: Omit<RentalOrder, 'id' | 'createdAt' | 'updatedAt'>) => Promise<RentalOrder | null>;
   updateOrder: (id: string, updates: Partial<RentalOrder>) => Promise<void>;
-  
+
   // Quotations
   quotations: Quotation[];
   addQuotation: (quotation: Omit<Quotation, 'id' | 'createdAt'>) => Promise<Quotation | null>;
   updateQuotation: (id: string, updates: Partial<Quotation>) => Promise<void>;
   convertQuotationToOrder: (quotationId: string) => Promise<RentalOrder | null>;
-  
+
   // Invoices
   invoices: Invoice[];
   addInvoice: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => Promise<Invoice | null>;
   updateInvoice: (id: string, updates: Partial<Invoice>) => Promise<void>;
-  
+
   // Settings
   attributes: ProductAttribute[];
   updateAttributes: (attrs: ProductAttribute[]) => Promise<void>;
@@ -184,6 +184,7 @@ function mapProductRowToProduct(row: ProductRow): Product {
     attributes: row.attributes,
     vendorId: row.vendor_id,
     createdAt: new Date(row.created_at),
+    variants: [],
   };
 }
 
@@ -205,6 +206,7 @@ function mapOrderRowToOrder(row: OrderRow): RentalOrder {
     notes: row.notes,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
+    lines: [],
   };
 }
 
@@ -220,6 +222,7 @@ function mapQuotationRowToQuotation(row: QuotationRow): Quotation {
     validUntil: new Date(row.valid_until),
     notes: row.notes,
     createdAt: new Date(row.created_at),
+    lines: [],
   };
 }
 
@@ -256,11 +259,13 @@ function mapCompanySettingsRowToCompanySettings(row: CompanySettingsRow): Compan
     taxRate: row.tax_rate,
     securityDepositPercent: row.security_deposit_percent,
     lateFeePerDay: row.late_fee_per_day,
+    id: row.id,
   };
 }
 
 function mapRentalSettingsRowToRentalSettings(row: RentalSettingsRow): RentalSettings {
   return {
+    id: row.id,
     allowHourly: row.allow_hourly,
     allowDaily: row.allow_daily,
     allowWeekly: row.allow_weekly,
@@ -475,7 +480,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (updates.isPublished !== undefined) updateData.is_published = updates.isPublished;
     if (updates.attributes !== undefined) updateData.attributes = updates.attributes;
     if (updates.quantityWithCustomer !== undefined) updateData.quantity_with_customer = updates.quantityWithCustomer;
-    
+
     const { error } = await supabase.from('products').update(updateData).eq('id', id);
     if (error) {
       console.error('Error updating product:', error);
@@ -550,7 +555,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const newOrder = mapOrderRowToOrder(newOrderRow as OrderRow);
     setOrders(prev => [...prev, newOrder]);
     return newOrder;
-  }, [useSupabase, isAuthenticated, user]);
+  }, [useSupabase, user]);
 
   const updateOrder = useCallback(async (id: string, updates: Partial<RentalOrder>): Promise<void> => {
     if (!useSupabase || !supabase) {
@@ -620,7 +625,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const newQuotation = mapQuotationRowToQuotation(newQuotationRow as QuotationRow);
     setQuotations(prev => [...prev, newQuotation]);
     return newQuotation;
-  }, [useSupabase, isAuthenticated, user]);
+  }, [useSupabase, user]);
 
   const updateQuotation = useCallback(async (id: string, updates: Partial<Quotation>): Promise<void> => {
     if (!useSupabase || !supabase) {
@@ -631,7 +636,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.validUntil !== undefined) updateData.valid_until = updates.validUntil.toISOString();
     if (updates.notes !== undefined) updateData.notes = updates.notes;
-    
+
     const { error } = await supabase.from('quotations').update(updateData).eq('id', id);
     if (error) {
       console.error('Error updating quotation:', error);
@@ -719,7 +724,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error('Error inserting order lines during conversion:', orderLinesError);
     }
     return newOrder;
-  }, [useSupabase, isAuthenticated, user, quotations, companySettings]);
+  }, [useSupabase, user, quotations, companySettings]);
 
   // Invoice operations
   const addInvoice = useCallback(async (invoice: Omit<Invoice, 'id' | 'createdAt'>): Promise<Invoice | null> => {
@@ -758,7 +763,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const newInvoice = mapInvoiceRowToInvoice(newInvoiceRow as InvoiceRow);
     setInvoices(prev => [...prev, newInvoice]);
     return newInvoice;
-  }, [useSupabase, isAuthenticated, user]);
+  }, [useSupabase, user]);
 
   const updateInvoice = useCallback(async (id: string, updates: Partial<Invoice>): Promise<void> => {
     if (!useSupabase || !supabase) {

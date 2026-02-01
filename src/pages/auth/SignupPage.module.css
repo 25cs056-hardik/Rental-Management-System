@@ -2,11 +2,11 @@
 .page {
   min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
   background: hsl(var(--background));
   padding: 1rem;
   font-family: inherit;
+  overflow-y: auto; 
 }
 
 .container {
@@ -17,6 +17,7 @@
   max-width: 480px;
   min-height: 480px;
   padding: 2.5rem 2rem;
+  margin: auto;
 }
 
 .title {
