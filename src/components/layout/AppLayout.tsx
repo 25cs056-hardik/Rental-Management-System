@@ -20,7 +20,6 @@ import {
   User,
   BarChart3,
   Building2,
-  ShieldCheck,
 } from 'lucide-react';
 import { NotificationPopover } from '@/components/notifications/NotificationPopover';
 import {
@@ -51,25 +50,15 @@ const navItems: NavItem[] = [
   { label: 'Shop', href: '/shop', icon: Store, roles: ['customer'] },
   { label: 'My Orders', href: '/my-orders', icon: FileText, roles: ['customer'] },
   { label: 'Vendor', href: '/vendor', icon: Building2, roles: ['customer'] },
-  { label: 'Admin', href: '/admin', icon: ShieldCheck, roles: ['customer', 'vendor'] },
   { label: 'Settings', href: '/settings', icon: Settings, roles: ['admin', 'vendor', 'customer'] },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout } = useAuth();
   const { getItemCount } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const handleRoleSwitch = async (role: 'admin' | 'vendor' | 'customer') => {
-    await switchRole(role);
-    if (role === 'customer') {
-      navigate('/shop');
-    } else {
-      navigate('/dashboard');
-    }
-  };
 
   const filteredNavItems = navItems.filter(item =>
     user && item.roles.includes(user.role)
@@ -221,39 +210,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
-                </DropdownMenuItem>
-
-                {/* Role Switcher Submenu for Demo */}
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                  Switch Role (Demo)
-                </DropdownMenuLabel>
-
-                <DropdownMenuItem
-                  onClick={() => handleRoleSwitch('admin')}
-                  disabled={user?.role === 'admin'}
-                >
-                  <ShieldCheck className="mr-2 h-4 w-4" />
-                  Admin
-                  {user?.role === 'admin' && <span className="ml-auto text-xs">Current</span>}
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  onClick={() => handleRoleSwitch('vendor')}
-                  disabled={user?.role === 'vendor'}
-                >
-                  <Building2 className="mr-2 h-4 w-4" />
-                  Vendor
-                  {user?.role === 'vendor' && <span className="ml-auto text-xs">Current</span>}
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  onClick={() => handleRoleSwitch('customer')}
-                  disabled={user?.role === 'customer'}
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  Customer
-                  {user?.role === 'customer' && <span className="ml-auto text-xs">Current</span>}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -24,7 +24,6 @@ import CartPage from "@/pages/cart/CartPage";
 import SettingsPage from "@/pages/settings/SettingsPage";
 import ReportsPage from "@/pages/reports/ReportsPage";
 import VendorApplicationPage from "@/pages/vendor/VendorApplicationPage";
-import AdminApplicationPage from "@/pages/admin/AdminApplicationPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +37,25 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+  
+  return <AppLayout>{children}</AppLayout>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  
+  if (isLoading) {
+    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Redirect non-admin users to their appropriate home page
+  if (user?.role !== 'admin') {
+    return <Navigate to={user?.role === 'customer' ? '/shop' : '/dashboard'} replace />;
   }
   
   return <AppLayout>{children}</AppLayout>;
@@ -73,8 +91,7 @@ function AppRoutes() {
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
       <Route path="/vendor" element={<ProtectedRoute><VendorApplicationPage /></ProtectedRoute>} />
-      <Route path="/admin" element={<ProtectedRoute><AdminApplicationPage /></ProtectedRoute>} />
-      <Route path="/customers" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/customers" element={<AdminRoute><DashboardPage /></AdminRoute>} />
       
       {/* Redirects */}
       <Route path="/" element={<Navigate to="/login" replace />} />
