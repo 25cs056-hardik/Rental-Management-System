@@ -356,31 +356,65 @@ export const defaultRentalSettings: RentalSettings = {
 };
 
 // Dashboard Mock Data
-export const getDashboardMetrics = (): DashboardMetrics => ({
-  totalRevenue: 285000,
-  activeRentals: 12,
-  totalProducts: mockProducts.length,
-  totalCustomers: 45,
-  pendingReturns: 3,
-  overdueReturns: 1,
-});
+export const getDashboardMetrics = (role: string = 'admin'): DashboardMetrics => {
+  if (role === 'vendor') {
+    return {
+      totalRevenue: 45000,
+      activeRentals: 4,
+      totalProducts: 8,
+      totalCustomers: 12, // "My Customers"
+      pendingReturns: 1,
+      overdueReturns: 0,
+    };
+  }
+  // Admin / Default
+  return {
+    totalRevenue: 285000,
+    activeRentals: 12,
+    totalProducts: mockProducts.length,
+    totalCustomers: 45,
+    pendingReturns: 3,
+    overdueReturns: 1,
+  };
+};
 
-export const getRevenueChartData = (): ChartDataPoint[] => [
-  { name: 'Jan', value: 35000 },
-  { name: 'Feb', value: 42000 },
-  { name: 'Mar', value: 38000 },
-  { name: 'Apr', value: 55000 },
-  { name: 'May', value: 48000 },
-  { name: 'Jun', value: 67000 },
-];
+export const getRevenueChartData = (role: string = 'admin'): ChartDataPoint[] => {
+  if (role === 'vendor') {
+    return [
+      { name: 'Jan', value: 5000 },
+      { name: 'Feb', value: 8500 },
+      { name: 'Mar', value: 7000 },
+      { name: 'Apr', value: 9500 },
+      { name: 'May', value: 8000 },
+      { name: 'Jun', value: 12000 },
+    ];
+  }
+  return [
+    { name: 'Jan', value: 35000 },
+    { name: 'Feb', value: 42000 },
+    { name: 'Mar', value: 38000 },
+    { name: 'Apr', value: 55000 },
+    { name: 'May', value: 48000 },
+    { name: 'Jun', value: 67000 },
+  ];
+};
 
-export const getTopProductsData = (): ChartDataPoint[] => [
-  { name: 'DSLR Camera', value: 45 },
-  { name: 'PA System', value: 38 },
-  { name: 'Projector', value: 32 },
-  { name: 'Video Camera', value: 28 },
-  { name: 'LED Kit', value: 22 },
-];
+export const getTopProductsData = (role: string = 'admin'): ChartDataPoint[] => {
+  if (role === 'vendor') {
+    return [
+      { name: 'DSLR Camera', value: 15 },
+      { name: 'PA System', value: 12 },
+      { name: 'Tripod', value: 8 },
+    ];
+  }
+  return [
+    { name: 'DSLR Camera', value: 45 },
+    { name: 'PA System', value: 38 },
+    { name: 'Projector', value: 32 },
+    { name: 'Video Camera', value: 28 },
+    { name: 'LED Kit', value: 22 },
+  ];
+};
 
 export const getOrderStatusData = (): ChartDataPoint[] => [
   { name: 'Active', value: 12, fill: 'hsl(var(--success))' },

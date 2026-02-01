@@ -10,10 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { 
-  Building2, 
-  Settings2, 
-  Tag, 
+import {
+  Building2,
+  Settings2,
+  Tag,
   User,
   Plus,
   X,
@@ -22,7 +22,7 @@ import {
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const { 
+  const {
     attributes, updateAttributes,
     companySettings, updateCompanySettings,
     rentalSettings, updateRentalSettings
@@ -86,20 +86,24 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Manage your system configuration</p>
       </div>
 
-      <Tabs defaultValue="company" className="space-y-6">
+      <Tabs defaultValue={user?.role === 'admin' ? "company" : "profile"} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
-          <TabsTrigger value="company" className="gap-2">
-            <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Company</span>
-          </TabsTrigger>
-          <TabsTrigger value="rental" className="gap-2">
-            <Settings2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Rental</span>
-          </TabsTrigger>
-          <TabsTrigger value="attributes" className="gap-2">
-            <Tag className="h-4 w-4" />
-            <span className="hidden sm:inline">Attributes</span>
-          </TabsTrigger>
+          {user?.role === 'admin' && (
+            <>
+              <TabsTrigger value="company" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Company</span>
+              </TabsTrigger>
+              <TabsTrigger value="rental" className="gap-2">
+                <Settings2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Rental</span>
+              </TabsTrigger>
+              <TabsTrigger value="attributes" className="gap-2">
+                <Tag className="h-4 w-4" />
+                <span className="hidden sm:inline">Attributes</span>
+              </TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profile</span>

@@ -122,6 +122,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <nav className="flex-1 space-y-1 overflow-y-auto p-4">
             {filteredNavItems.map((item) => {
               const isActive = location.pathname === item.href;
+              let label = item.label;
+              if (user?.role === 'vendor' && item.href === '/dashboard') {
+                label = 'Vendor Portal';
+              }
+
               return (
                 <Link
                   key={item.href}
@@ -135,7 +140,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   )}
                 >
                   <item.icon className="h-4 w-4" />
-                  {item.label}
+                  {label}
                 </Link>
               );
             })}
