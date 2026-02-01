@@ -1,6 +1,6 @@
-# 🛒 RentMart – Rental Management System
+# 🛒 RentFlow – Rental Management System
 
-RentMart is a modern **rental marketplace platform** inspired by Amazon and Flipkart, where users can rent products and vendors can list products for rent after admin approval.  
+RentFlow is a modern **rental marketplace platform** inspired by Amazon and Flipkart, where users can rent products and vendors can list products for rent after admin approval.  
 The system is designed to demonstrate **real-world marketplace logic**, **clean UI/UX**, and **scalable architecture** within a hackathon environment.
 
 ---
