@@ -19,6 +19,7 @@ interface AuthContextType {
   logout: () => void;
   forgotPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   applyVendorAccess: (data: VendorApplicationData) => Promise<{ success: boolean; error?: string }>;
+  switchRole: (role: 'admin' | 'vendor' | 'customer') => Promise<{ success: boolean; error?: string }>;
 }
 
 interface SignupData {
@@ -350,6 +351,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, useSupabase]
   );
 
+  const switchRole = useCallback(async (role: 'admin' | 'vendor' | 'customer'): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: 'Not logged in' };
+
+    // Auto-fill mock data for demo purposes if switching to elevated roles without prior setup
+    let finalUser = { ...user, role };
+
+    if (role === 'vendor' && (!user.companyName || !user.gstin)) {
+      finalUser = {
+        ...finalUser,
+        companyName: 'Demo Vendor Corp',
+        gstin: '29ABCDE1234F1Z5',
+        phone: '+91 9876543210'
+      };
+    }
+
+    if (useSupabase && supabase) {
+      // Ideally we would update the DB, but for demo switching we might just update local state
+      // if the DB schema enforces not-null constraints that we can't easily satisfy here.
+      // However, let's try to update the profile if we can.
+      const updates: any = { role };
+      if (role === 'vendor') {
+        const { companyName, gstin, phone } = finalUser;
+        if (companyName) updates.company_name = companyName;
+        if (gstin) updates.gstin = gstin;
+        if (phone) updates.phone = phone;
+      }
+
+      const { error } = await supabase.from('profiles').update(updates).eq('id', user.id);
+      if (error) {
+        console.error('Failed to update role in DB:', error);
+        // For demo purposes, we proceed even if DB update fails (e.g. RLS policies)
+      }
+    } else {
+      localStorage.setItem('rental_user', JSON.stringify(finalUser));
+    }
+
+    setUser(finalUser);
+    return { success: true };
+  }, [user, useSupabase]);
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -359,6 +400,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     forgotPassword,
     applyVendorAccess,
+    switchRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
