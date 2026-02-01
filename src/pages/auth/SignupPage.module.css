@@ -1,0 +1,189 @@
+/* Sign up page - uses website CSS variables for colors */
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--background));
+  padding: 1rem;
+  font-family: inherit;
+}
+
+.container {
+  background-color: hsl(var(--card));
+  border-radius: 30px;
+  box-shadow: 0 5px 15px hsl(var(--foreground) / 0.08);
+  width: 100%;
+  max-width: 480px;
+  min-height: 480px;
+  padding: 2.5rem 2rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.socialIcons {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1.25rem 0;
+}
+
+.socialIcons a {
+  border: 1px solid hsl(var(--border));
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--foreground));
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.socialIcons a:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--primary));
+}
+
+.orText {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.input {
+  background-color: hsl(var(--input));
+  border: 1px solid hsl(var(--border));
+  padding: 10px 15px;
+  font-size: 0.8125rem;
+  border-radius: var(--radius);
+  width: 100%;
+  outline: none;
+  font-family: inherit;
+  color: hsl(var(--foreground));
+}
+
+.input:focus {
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.3);
+}
+
+.select {
+  background-color: hsl(var(--input));
+  border: 1px solid hsl(var(--border));
+  padding: 10px 15px;
+  font-size: 0.8125rem;
+  border-radius: var(--radius);
+  width: 100%;
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+  color: hsl(var(--foreground));
+}
+
+.select:focus {
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.3);
+}
+
+.submitBtn {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 0.75rem;
+  padding: 12px 45px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  font-family: inherit;
+  width: 100%;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.submitBtn:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.error {
+  background-color: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+  font-size: 0.8125rem;
+  padding: 0.75rem;
+  border-radius: var(--radius);
+}
+
+.signInLink {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: 0.8125rem;
+  color: hsl(var(--foreground));
+}
+
+.signInLink a {
+  color: hsl(var(--primary));
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.signInLink a:hover {
+  text-decoration: underline;
+}
+
+.passwordRow {
+  position: relative;
+}
+
+.passwordRow .input {
+  padding-right: 2.5rem;
+}
+
+.toggleVisibility {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: hsl(var(--muted-foreground));
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggleVisibility:hover {
+  color: hsl(var(--foreground));
+}
+
+.requirement {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  margin-top: 0.25rem;
+}
+
+.optionalLabel {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  margin-top: 0.25rem;
+}
